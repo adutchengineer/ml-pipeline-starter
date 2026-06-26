@@ -9,4 +9,4 @@ Importing any module runs no work; the run lives behind the `__main__` guard, so
 package is both importable for its parts and runnable as a program (`python -m ml_pipeline`).
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
