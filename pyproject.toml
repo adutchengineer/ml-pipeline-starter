@@ -1,0 +1,19 @@
+[project]
+name = "ml-pipeline"
+version = "0.1.0"
+description = "A small, real ML package: load, build features, train, score a loan-default model."
+requires-python = ">=3.12"
+dependencies = [
+    "pandas",
+    "scikit-learn",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"ml_pipeline.datasets" = ["*.csv"]
