@@ -14,8 +14,8 @@ functions apply to it regardless of the dataset.
     auc = train_and_score(X, y)
 """
 
-from ml_pipeline.features import build_features
+from ml_pipeline.features import FeatureTransform, build_features
 from ml_pipeline.model import train_and_score
 
-__version__ = "1.0.0"
-__all__ = ["build_features", "train_and_score"]
+__version__ = "1.1.0"
+__all__ = ["FeatureTransform", "build_features", "train_and_score"]

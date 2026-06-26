@@ -55,6 +55,23 @@ print(f"{len(feature_cols)} features, test AUC {auc:.3f}")
 The same two calls work on Lending Club, the Adult/Census data, or any other tabular
 classification set — the package applies *to* the data; it does not contain it.
 
+### A train-safe transform (1.1.0)
+
+`build_features` one-hot encodes with `get_dummies`, so the columns it returns depend on
+which categories are in the batch — a single serving row produces a different matrix than
+the training frame did. `FeatureTransform` removes that skew: `fit` learns the levels and
+fill values on the training frame, and `transform` reproduces the same columns in the same
+order for any later input.
+
+```python
+from ml_pipeline import FeatureTransform
+
+ft = FeatureTransform(numeric=[...], categorical=[...]).fit(train_df)
+X_train = ft.transform(train_df)
+X_row   = ft.transform(one_request_row)   # identical columns and order, even for an
+                                          # unseen category (it maps to all-zeros)
+```
+
 ## A known flaw, on purpose
 
 `features.py` fills missing values with the mean of the **whole** frame, including the
