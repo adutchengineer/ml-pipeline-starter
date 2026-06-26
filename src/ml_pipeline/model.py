@@ -1,7 +1,7 @@
-"""Training and scoring — the split-and-fit cells, as a module.
+"""Training and scoring — split, fit, and score a model on a feature matrix.
 
-The dependency edges run one way: `__main__` -> `model` -> `features` -> `data`, so a
-test can import `model` to train without dragging in the entry point.
+`model` and `features` are independent — neither imports the other — so a test or a
+notebook can import just this function and train without pulling in anything else.
 """
 
 import pandas as pd
