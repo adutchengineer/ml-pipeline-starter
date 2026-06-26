@@ -28,10 +28,25 @@ The import edges run one way — `__main__` → `model` → `features` → `data
 import any piece without dragging in the rest. Nothing runs at import time; the work
 lives behind the `__main__` guard.
 
+## Install
+
+It is published on PyPI, so you can install it like any package (the import name is
+`ml_pipeline`; the distribution name is namespaced):
+
+```bash
+pip install dutchengineer-ml-pipeline
+```
+
+Or, to work on it, clone this repo and install it editable so your edits are live and
+imports resolve from anywhere:
+
+```bash
+pip install -e .
+```
+
 ## Run it
 
 ```bash
-pip install -e .          # editable install, so imports resolve from anywhere
 python -m ml_pipeline     # load → features → train → score
 ```
 
