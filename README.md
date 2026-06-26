@@ -37,31 +37,35 @@ The import name is `ml_pipeline`; the distribution name is namespaced (the bare
 
 ## Use it
 
-Bring your own DataFrame and say which columns are numeric and which are categorical:
+Bring your own DataFrame, name the columns, and run a leakage-free split, fit, and score:
 
 ```python
-from ml_pipeline import build_features, train_and_score
+from ml_pipeline import FeatureTransform, leakage_free_split, train_and_score
 
-# df is any tabular frame; y is the binary label column
-X, feature_cols = build_features(
-    df,
+# df is any raw tabular frame; y is the binary label column
+ft = FeatureTransform(
     numeric=["loan_amnt", "int_rate", "annual_inc"],
     categorical=["home_ownership", "purpose"],
 )
-auc = train_and_score(X, y)
-print(f"{len(feature_cols)} features, test AUC {auc:.3f}")
+X_train, X_test, y_train, y_test = leakage_free_split(df, y, ft)
+auc = train_and_score(X_train, X_test, y_train, y_test)
+print(f"test AUC {auc:.3f}")
 ```
 
-The same two calls work on Lending Club, the Adult/Census data, or any other tabular
+The same calls work on Lending Club, the Adult/Census data, or any other tabular
 classification set — the package applies *to* the data; it does not contain it.
 
-### A train-safe transform (1.1.0)
+### The pieces
 
-`build_features` one-hot encodes with `get_dummies`, so the columns it returns depend on
-which categories are in the batch — a single serving row produces a different matrix than
-the training frame did. `FeatureTransform` removes that skew: `fit` learns the levels and
-fill values on the training frame, and `transform` reproduces the same columns in the same
-order for any later input.
+- **`FeatureTransform` (1.1.0)** — `build_features` one-hot encodes with `get_dummies`, so
+  the columns depend on the batch and a serving row differs from the training frame.
+  `FeatureTransform` removes that skew: `fit` learns the levels and fills on the training
+  frame, `transform` reproduces the same columns in the same order for any input (an unseen
+  category maps to all-zeros).
+- **`leakage_free_split` (2.0.0)** — splits the *raw* frame first, fits the transform on the
+  **training rows only**, then applies it to both splits, so no test statistic leaks into
+  training. This is why `train_and_score` now takes pre-split data instead of splitting
+  internally — see Versioning.
 
 ```python
 from ml_pipeline import FeatureTransform
@@ -72,14 +76,22 @@ X_row   = ft.transform(one_request_row)   # identical columns and order, even fo
                                           # unseen category (it maps to all-zeros)
 ```
 
-## A known flaw, on purpose
+## The flaw that drove the 2.0.0 bump
 
-`features.py` fills missing values with the mean of the **whole** frame, including the
-rows that become the test set — so a test statistic leaks into training. It is left in
-place because Module 1 is about *packaging*, not *modeling*; Module 3 fixes it by
-fitting the fill on the training split only. Converting the notebook faithfully means
-carrying its behavior forward unchanged, flaws included, so you can fix them one at a
-time in a place you can actually find them.
+Through `1.x`, the transform learned its fill values and category levels from the
+**whole** frame — including the rows that become the test set — so a test statistic
+leaked into training and the reported AUC was optimistic. That flaw was carried forward
+unchanged from the original notebook on purpose: Module 1 was about *packaging*, not
+*modeling*, so the conversion preserved the notebook's behavior, leak and all, in a
+place you could actually find it.
+
+`leakage_free_split` (2.0.0) closes it: split the raw frame first, fit the transform on
+the training rows only, then apply to both. Because the model now sees an honest training
+distribution, **the score changes** — which is precisely why this is a MAJOR version bump
+rather than a quiet patch. It is also a breaking *API* change: `train_and_score` now takes
+the four pre-split arrays (`X_train, X_test, y_train, y_test`) instead of `(X, y)`, because
+the split has to happen — on raw data — before the transform is fit. The old `1.x`
+`train_and_score(X, y)` is gone; that is what a MAJOR bump signals to anyone who imported it.
 
 ## Versioning
 

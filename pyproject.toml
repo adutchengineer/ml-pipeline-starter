@@ -2,7 +2,7 @@
 # Distribution name is namespaced (the bare "ml-pipeline" is taken on PyPI); the
 # import name stays `ml_pipeline`. Install with `pip install dutchengineer-ml-pipeline`.
 name = "dutchengineer-ml-pipeline"
-version = "1.1.0"
+version = "2.0.0"
 description = "A small, real ML package: load, build features, train, score a loan-default model. The Module 1 example from the DutchEngineer track."
 readme = "README.md"
 requires-python = ">=3.12"

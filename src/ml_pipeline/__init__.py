@@ -16,6 +16,12 @@ functions apply to it regardless of the dataset.
 
 from ml_pipeline.features import FeatureTransform, build_features
 from ml_pipeline.model import train_and_score
+from ml_pipeline.split import leakage_free_split
 
-__version__ = "1.1.0"
-__all__ = ["FeatureTransform", "build_features", "train_and_score"]
+__version__ = "2.0.0"
+__all__ = [
+    "FeatureTransform",
+    "build_features",
+    "leakage_free_split",
+    "train_and_score",
+]
