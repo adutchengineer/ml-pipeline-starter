@@ -19,9 +19,11 @@ ml-pipeline-starter/
   pyproject.toml            # declares the package + its dependencies
   src/
     ml_pipeline/
-      __init__.py           # exports build_features, train_and_score
+      __init__.py           # exports the feature, split, model, and artifact pieces
       features.py           # build the model matrix from any frame + column lists
-      model.py              # split, fit a logistic regression, return the test AUC
+      split.py              # leakage-free split: fit the transform on train rows only
+      model.py              # fit a logistic regression on pre-split data, return test AUC
+      artifact.py           # bundle transform + calibrated model + card; save/reload as one file
 ```
 
 Nothing runs at import time, and the two functions are independent — import either one.
@@ -66,6 +68,12 @@ classification set — the package applies *to* the data; it does not contain it
   **training rows only**, then applies it to both splits, so no test statistic leaks into
   training. This is why `train_and_score` now takes pre-split data instead of splitting
   internally — see Versioning.
+- **`TrainedModel` / `train_artifact` (2.1.0)** — bundles the fitted `FeatureTransform`, a
+  calibrated classifier, and a `ModelCard` (metric, calibration method, seed, library
+  versions) into one object that `save`s and `load`s as a single file. Because the transform
+  is bundled *inside* the artifact, the reloaded model applies the exact same feature steps it
+  was trained on — `predict_proba` takes **raw** rows and returns identical scores before and
+  after a save/reload, in any process.
 
 ```python
 from ml_pipeline import FeatureTransform
@@ -74,6 +82,23 @@ ft = FeatureTransform(numeric=[...], categorical=[...]).fit(train_df)
 X_train = ft.transform(train_df)
 X_row   = ft.transform(one_request_row)   # identical columns and order, even for an
                                           # unseen category (it maps to all-zeros)
+```
+
+Train a serializable artifact and reload it without train/serve skew:
+
+```python
+from ml_pipeline import FeatureTransform, leakage_free_split, train_artifact, TrainedModel
+
+ft = FeatureTransform(numeric=[...], categorical=[...])
+X_train, X_test, y_train, y_test = leakage_free_split(df, y, ft)
+
+model = train_artifact(X_train, y_train, ft, metric_name="roc_auc", metric_value=auc)
+model.save("model.joblib")
+
+# later, different process — same transform travels inside the file:
+reloaded = TrainedModel.load("model.joblib")
+scores = reloaded.predict_proba(df)   # takes RAW rows; identical to before the save
+print(reloaded.card)                  # metric, calibration, seed, library versions
 ```
 
 ## The flaw that drove the 2.0.0 bump
@@ -104,15 +129,23 @@ is `MAJOR.MINOR.PATCH`, and each part means something specific.
 - **MINOR** — a new capability added in a backward-compatible way. Old imports still work.
 - **PATCH** — a bug fix that changes no interface.
 
-This release is **`1.0.0`** — the first version that is actually usable: it installs,
-imports, and runs end to end. It is `1.0.0`, not `0.x`, because the package presents a
-stable surface (`load`, `build_features`, `train_and_score`, `python -m ml_pipeline`)
-that the rest of the course builds against.
+The first release is **`1.0.0`** — the first version that is actually usable: it
+installs, imports, and runs end to end. It is `1.0.0`, not `0.x`, because the package
+presents a stable surface (`build_features`, `train_and_score`) that the rest of the
+course builds against.
 
-As the course continues, each module adds a backward-compatible layer to this same
-package — a real feature transform, a typed contract, a locked environment — so the
-version moves by **MINOR** bumps: `1.1.0`, `1.2.0`, and so on. The day a change breaks
-the public surface (for example, the Module 3 fix that changes how features are built
-and therefore the scores), that is a **MAJOR** bump to `2.0.0` — and the version number
-is how a downstream user knows to expect it. Tagged releases (`git tag v1.0.0`) mark
-each of these states so you can check out the package exactly as it stood at any point.
+Each module then adds a layer to this same package, and the version moves the way
+semantic versioning says it should:
+
+- **`1.0.0`** — `build_features` + `train_and_score` (Module 1: packaging the notebook).
+- **`1.1.0`** — adds `FeatureTransform`, a fittable transform that freezes columns and
+  order. Backward-compatible (old imports still work) → **MINOR**.
+- **`2.0.0`** — `leakage_free_split` closes the train/test leak, which changes the scores
+  *and* the API (`train_and_score` now takes pre-split arrays). Breaking → **MAJOR**.
+- **`2.1.0`** — adds `TrainedModel` / `train_artifact`: a calibrated, serializable model
+  that reloads and predicts identically, with a model card. Purely additive → **MINOR**.
+
+`2.1.0` is the last version of the package itself: later modules (deployment, monitoring,
+the API service) build code and configuration *around* this package rather than growing
+it further, so they add no new versions. Tagged releases (`git tag v1.0.0` … `v2.1.0`)
+mark each state so you can check out the package exactly as it stood at any point.
