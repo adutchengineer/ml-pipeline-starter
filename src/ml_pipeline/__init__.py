@@ -1,12 +1,21 @@
-"""ml_pipeline — a small, real ML package: load, build features, train, score.
+"""ml_pipeline — dataset-agnostic feature-building and model scoring.
 
-This is the example built in Module 1 of the DutchEngineer "Ship an End-to-End ML
-Product" track: a data scientist's notebook converted into a package with clear
-responsibilities. `data` loads, `features` builds the model matrix, `model` trains and
-scores, and `__main__` is the one entry point that runs them in order.
+A small library extracted from the Module 1 example of the DutchEngineer "Ship an
+End-to-End ML Product" track. It is the *logic* a data scientist's notebook contained —
+build a feature matrix, train a model, score it — lifted out of the notebook and into
+functions you can import and apply to any tabular dataset.
 
-Importing any module runs no work; the run lives behind the `__main__` guard, so the
-package is both importable for its parts and runnable as a program (`python -m ml_pipeline`).
+It carries no data of its own: you bring a DataFrame and the column lists, and the
+functions apply to it regardless of the dataset.
+
+    from ml_pipeline import build_features, train_and_score
+
+    X, feature_cols = build_features(df, numeric=[...], categorical=[...])
+    auc = train_and_score(X, y)
 """
 
+from ml_pipeline.features import build_features
+from ml_pipeline.model import train_and_score
+
 __version__ = "1.0.0"
+__all__ = ["build_features", "train_and_score"]

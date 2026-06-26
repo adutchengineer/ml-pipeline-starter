@@ -3,10 +3,14 @@
 A small, **real** ML package — the example built in Module 1 of the DutchEngineer
 [*Ship an End-to-End ML Product*](https://learn.dutchengineer.org) track.
 
-It is what a data scientist's notebook becomes once it is converted into a package you
-can install, import, and run: load the loan data, build features, train a logistic
-regression, and print a test ROC-AUC. The point is not the model (the AUC is modest and
-the feature step has a deliberate flaw — see below); the point is the **shape**.
+It is the *logic* a data scientist's notebook contained — build a feature matrix, train
+a model, score it — lifted out of the notebook and into functions you can import and
+apply to **any** tabular dataset. It carries no data of its own; you bring a DataFrame
+and the column lists, and the functions apply to it regardless of the dataset.
+
+The point is not the model (the AUC is modest and the feature step has a deliberate
+flaw — see below); the point is the **shape**: reusable functions instead of a notebook
+you can only run top to bottom.
 
 ## Layout
 
@@ -15,61 +19,41 @@ ml-pipeline-starter/
   pyproject.toml            # declares the package + its dependencies
   src/
     ml_pipeline/
-      __init__.py
-      data.py               # load the data (one job)
-      features.py           # build the model matrix
-      model.py              # split, fit, score
-      __main__.py           # the entry point: python -m ml_pipeline
-      datasets/
-        lending_club_sample.csv
+      __init__.py           # exports build_features, train_and_score
+      features.py           # build the model matrix from any frame + column lists
+      model.py              # split, fit a logistic regression, return the test AUC
 ```
 
-The import edges run one way — `__main__` → `model` → `features` → `data` — so you can
-import any piece without dragging in the rest. Nothing runs at import time; the work
-lives behind the `__main__` guard.
+Nothing runs at import time, and the two functions are independent — import either one.
 
 ## Install
-
-It is published on PyPI, so you can install it like any package (the import name is
-`ml_pipeline`; the distribution name is namespaced):
 
 ```bash
 pip install dutchengineer-ml-pipeline
 ```
 
-Or, to work on it, clone this repo and install it editable so your edits are live and
-imports resolve from anywhere:
+The import name is `ml_pipeline`; the distribution name is namespaced (the bare
+`ml-pipeline` is taken on PyPI). To work on it, clone this repo and `pip install -e .`.
 
-```bash
-pip install -e .
-```
+## Use it
 
-## Run it
-
-```bash
-python -m ml_pipeline     # load → features → train → score
-```
-
-You should see something like:
-
-```
-rows: 5000
-features: 24
-test AUC: 0.691
-```
-
-## Use it from anywhere
-
-Because it is a package, you can import its parts — in a test, a script, or a notebook —
-without rerunning everything:
+Bring your own DataFrame and say which columns are numeric and which are categorical:
 
 ```python
-from ml_pipeline.data import load
-from ml_pipeline.features import build_features
+from ml_pipeline import build_features, train_and_score
 
-df = load()
-X, y, feature_cols = build_features(df)   # just the features, no training fires
+# df is any tabular frame; y is the binary label column
+X, feature_cols = build_features(
+    df,
+    numeric=["loan_amnt", "int_rate", "annual_inc"],
+    categorical=["home_ownership", "purpose"],
+)
+auc = train_and_score(X, y)
+print(f"{len(feature_cols)} features, test AUC {auc:.3f}")
 ```
+
+The same two calls work on Lending Club, the Adult/Census data, or any other tabular
+classification set — the package applies *to* the data; it does not contain it.
 
 ## A known flaw, on purpose
 
